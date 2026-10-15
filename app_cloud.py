@@ -16,6 +16,26 @@ st.set_page_config(
 )
 
 # ==========================================
+# 側邊欄：統計數據與狀態儀表板
+# ==========================================
+with st.sidebar:
+    st.header("📊 企劃數據統計")
+    
+    total_count = len(df_scripts)
+    st.metric("腳本總數", f"{total_count} 篇")
+    
+    if not df_scripts.empty and "status" in df_scripts.columns:
+        st.divider()
+        st.subheader("製作漏斗")
+        status_counts = df_scripts["status"].value_counts()
+        for stat in STATUS_OPTIONS:
+            count = status_counts.get(stat, 0)
+            st.write(f"- **{stat}**：{count} 篇")
+            
+    st.divider()
+    st.info("💡 **小技巧**：在手機或平板上，若側邊欄收起，可點擊左上角的 `>` 展開！")
+
+# ==========================================
 # 2. Google Sheets 正規連線 (雲端/本地雙支援)
 # ==========================================
 SCOPES = [
@@ -55,7 +75,7 @@ def save_data(worksheet_name, df):
     except Exception as e:
         st.error(f"寫入資料失敗：{e}")
 
-CATEGORIES = ["職涯/搞錢", "AI工具/效率", "護理/生活日常", "個人成長", "其他"]
+CATEGORIES = ["職涯/搞錢", "AI工具/效率", "生活日常", "個人成長", "其他"]
 STATUS_OPTIONS = ["選題靈感", "大綱擬定", "腳本完成", "已拍攝", "已發布"]
 
 # ==========================================
