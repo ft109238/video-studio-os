@@ -24,7 +24,12 @@ SCOPES = [
 
 @st.cache_resource
 def get_gspread_client():
-    creds = Credentials.from_service_account_file("google_key.json", scopes=SCOPES)
+    # 優先讀取雲端 Secrets，本地如果有檔案就讀本地
+    if "gcp_service_account" in st.secrets:
+        creds_dict = dict(st.secrets["gcp_service_account"])
+        creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
+    else:
+        creds = Credentials.from_service_account_file("google_key.json", scopes=SCOPES)
     return gspread.authorize(creds)
 
 gc = get_gspread_client()
