@@ -6,7 +6,7 @@ from datetime import datetime
 import time
 
 # ==========================================
-# 1. 頁面基本配置
+# 1. 頁面配置
 # ==========================================
 st.set_page_config(
     page_title="短影音腳本工作室 (雲端同步版)",
@@ -14,26 +14,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
-
-# ==========================================
-# 側邊欄：統計數據與狀態儀表板
-# ==========================================
-with st.sidebar:
-    st.header("📊 企劃數據統計")
-    
-    total_count = len(df_scripts)
-    st.metric("腳本總數", f"{total_count} 篇")
-    
-    if not df_scripts.empty and "status" in df_scripts.columns:
-        st.divider()
-        st.subheader("製作漏斗")
-        status_counts = df_scripts["status"].value_counts()
-        for stat in STATUS_OPTIONS:
-            count = status_counts.get(stat, 0)
-            st.write(f"- **{stat}**：{count} 篇")
-            
-    st.divider()
-    st.info("💡 **小技巧**：在手機或平板上，若側邊欄收起，可點擊左上角的 `>` 展開！")
 
 # ==========================================
 # 2. Google Sheets 正規連線 (雲端/本地雙支援)
@@ -79,7 +59,31 @@ CATEGORIES = ["職涯/搞錢", "AI工具/效率", "生活日常", "個人成長"
 STATUS_OPTIONS = ["選題靈感", "大綱擬定", "腳本完成", "已拍攝", "已發布"]
 
 # ==========================================
-# 3. 對話框彈窗：強制防呆刪除確認
+# 3. 先把資料讀進來 (關鍵修復：解決 NameError)
+# ==========================================
+df_scripts = get_data("scripts")
+
+# ==========================================
+# 4. 側邊欄統計面板 (資料有了之後才渲染)
+# ==========================================
+with st.sidebar:
+    st.header("📊 企劃數據統計")
+    total_count = len(df_scripts)
+    st.metric("腳本總數", f"{total_count} 篇")
+    
+    if not df_scripts.empty and "status" in df_scripts.columns:
+        st.divider()
+        st.subheader("製作進度統計")
+        status_counts = df_scripts["status"].value_counts()
+        for stat in STATUS_OPTIONS:
+            count = status_counts.get(stat, 0)
+            st.write(f"- **{stat}**：{count} 篇")
+            
+    st.divider()
+    st.caption("💡 行動裝置點選左上方箭頭即可收合或展開側邊欄。")
+
+# ==========================================
+# 5. 對話框彈窗：強制防呆刪除確認
 # ==========================================
 @st.dialog("⚠️ 刪除確認")
 def confirm_delete_dialog(item_id, item_title, df_all):
@@ -98,7 +102,7 @@ def confirm_delete_dialog(item_id, item_title, df_all):
             st.rerun()
 
 # ==========================================
-# 4. 對話框彈窗：直接原地編輯完整內容
+# 6. 對話框彈窗：直接原地編輯完整內容
 # ==========================================
 @st.dialog("✏️ 編輯腳本內容", width="large")
 def edit_script_dialog(row_data, df_all):
@@ -136,12 +140,10 @@ def edit_script_dialog(row_data, df_all):
                 st.rerun()
 
 # ==========================================
-# 5. 主畫面渲染
+# 7. 主畫面渲染
 # ==========================================
 st.title("🎬 短影音腳本工作室 (雲端同步中)")
 st.caption("資料已即時連動至 Google 試算表")
-
-df_scripts = get_data("scripts")
 
 tab_write, tab_manage = st.tabs(["✍️ 撰寫新企劃", "📚 腳本庫管理"])
 
@@ -165,7 +167,6 @@ with tab_write:
         new_status = st.selectbox("製作進度狀態", STATUS_OPTIONS)
 
     if st.button("☁️ 儲存並同步至雲端", type="primary"):
-        # 防呆優化：只驗證標題，Hook 可完全留白
         if not new_title.strip():
             st.error("⚠️ 請至少填寫「影片標題」以便存檔！")
         else:
@@ -206,7 +207,6 @@ with tab_manage:
                     st.caption(f"🏷️ 標籤：{row.get('tags', '')} ｜ 建立日期：{row.get('created_at', '')}")
 
                 with col_right:
-                    # 原生狀態快速切換選單
                     curr_status = row.get("status", "選題靈感")
                     stat_index = STATUS_OPTIONS.index(curr_status) if curr_status in STATUS_OPTIONS else 0
                     
@@ -217,7 +217,6 @@ with tab_manage:
                         key=f"status_select_{row['id']}"
                     )
                     
-                    # 狀態改變立即自動更新試算表
                     if changed_status != curr_status:
                         mask = df_scripts["id"].astype(str) == str(row["id"])
                         df_scripts.loc[mask, "status"] = changed_status
